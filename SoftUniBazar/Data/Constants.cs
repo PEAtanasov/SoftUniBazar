@@ -11,6 +11,7 @@
         //Category constants
         public const int CategoryNameMaxLength = 15;
         public const int CategoryNameMinLength = 3;
+
         //DateTime parsing format
         public const string DateFormat = "yyyy-MM-dd H:mm";
     }
