@@ -5,6 +5,8 @@ namespace SoftUniBazar.Models
 {
     public class AdFormModel
     {
+        public int Id { get; set; }
+
         [Required]
         [StringLength(Constants.AdNameMaxLength,MinimumLength =Constants.AdNameMinLength)]
         public string Name { get; set; } = string.Empty;
