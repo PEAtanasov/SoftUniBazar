@@ -78,7 +78,7 @@ namespace SoftUniBazar.Controllers
             await data.AddAsync(entity);
             await data.SaveChangesAsync();
 
-            return RedirectToAction("All", "Ad");
+            return RedirectToAction(nameof(All));
         }
 
         [HttpGet]
@@ -142,8 +142,95 @@ namespace SoftUniBazar.Controllers
 
             data.SaveChanges();
 
-            return RedirectToAction("All", "Ad");
+            return RedirectToAction(nameof(All));
         }
+
+        [HttpPost]
+        public async Task<IActionResult> AddToCart(int id)
+        {
+            var ad = await data.Ads
+                .Where(a=>a.Id==id)
+                .Include(a=>a.AdBuyers)
+                .FirstOrDefaultAsync();
+
+            if (ad==null)
+            {
+                return BadRequest();
+            }
+
+            if (ad.OwnerId == GetUserId())
+            {
+                return Unauthorized();
+            }
+
+            if (ad.AdBuyers.Any(a=>a.BuyerId==GetUserId()))
+            {
+                return RedirectToAction(nameof(All));
+            }
+
+            ad.AdBuyers.Add(new AdBuyer()
+            {
+                BuyerId = GetUserId(),
+                AdId=id
+            });
+
+            await data.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Cart));
+            
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RemoveFromCart(int id)
+        {
+            var adToRemove = await data.Ads
+                .Where(a=>a.Id==id)
+                .Include(a=>a.AdBuyers)
+                .FirstOrDefaultAsync();
+
+            if (adToRemove ==null)
+            {
+                return BadRequest();
+            }
+
+            if (!adToRemove.AdBuyers.Any(a=>a.BuyerId == GetUserId()))
+            {
+                return Unauthorized();
+            }
+
+            var buyerToRemove = adToRemove.AdBuyers.FirstOrDefault(a=>a.BuyerId==GetUserId());
+
+            if (buyerToRemove != null)
+            {
+                data.AdsBuyers.Remove(buyerToRemove);
+                await data.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(All));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Cart()
+        {
+            var ads = await data.AdsBuyers
+                .AsNoTracking()
+                .Where(ab => ab.BuyerId == GetUserId())
+                .Select(ab => new AdViewModel()
+                {
+                    Id=ab.AdId,
+                    Name = ab.Ad.Name,
+                    ImageUrl = ab.Ad.ImageUrl,
+                    CreatedOn = ab.Ad.CreatedOn.ToString(Constants.DateFormat),
+                    Description = ab.Ad.Description,
+                    Price = ab.Ad.Price,
+                    Owner = ab.Ad.Owner.UserName
+                })
+                .ToListAsync();
+                
+
+            return View(ads);
+        }
+
 
         private async Task<ICollection<CategoryViewModel>> GetCategoriesAsync()
         {
